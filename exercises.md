@@ -30,11 +30,11 @@ critical.
 
 | Metric | Acceptable Low Score Scenario | Critical Low Score Scenario | Action Required |
 |---|---|---|---|
-| Faithfulness | | | |
-| Answer Relevance | | | |
-| Context Recall | | | |
-| Context Precision | | | |
-| Completeness | | | |
+| Faithfulness | Câu hỏi ngoài lề (chit-chat) không cần ngữ cảnh (VD: "Chào bạn") | Có ảo giác (Hallucination), agent bịa ra thông tin không có trong context | Cải thiện prompt bắt buộc agent bám sát context, tăng cường guardrail |
+| Answer Relevance | Câu trả lời kèm thêm thông tin bổ sung có ích dù hỏi ngắn gọn | Trả lời lạc đề, hoàn toàn không liên quan đến câu hỏi | Tinh chỉnh prompt, kiểm tra lại intent detection |
+| Context Recall | Câu hỏi đơn giản chỉ cần 1 chunk để trả lời (nhiều chunks bị bỏ sót không quan trọng) | Retriever không lấy được chunk chứa thông tin cốt lõi (Evidence) | Đổi embedding model, tinh chỉnh chiến lược chunking, tăng top-k |
+| Context Precision | Có noise ở top đầu nhưng chunk quan trọng vẫn nằm trong top-K đủ để LLM tổng hợp | Chunk chứa thông tin đúng bị đẩy xuống quá sâu hoặc không có trong top-k | Sử dụng Reranker (VD: Cohere Rerank, Cross-encoder) |
+| Completeness | Người dùng yêu cầu tóm tắt ngắn gọn, không cần chi tiết | Bỏ sót các điều kiện, cảnh báo hoặc ngoại lệ quan trọng trong chính sách | Sửa prompt yêu cầu LLM trích xuất đầy đủ các điều kiện |
 
 ### Exercise 1.2 — Bias trong LLM-as-a-Judge
 
@@ -46,15 +46,18 @@ Ba bias thường gặp:
 
 **Câu 1: Thiết kế experiment phát hiện position bias với ít nhất hai conditions.**
 
-> *Câu trả lời:*
+> *Câu trả lời:* Đưa cùng một cặp (Answer A, Answer B) cho LLM Judge chấm hai lần. 
+> Condition 1: Đặt Answer A trước Answer B.
+> Condition 2: Đặt Answer B trước Answer A (hoán đổi vị trí).
+> Nếu LLM Judge luôn chọn Answer đứng đầu (hoặc cho điểm cao hơn một cách bất thường) bất kể đó là A hay B, thì hệ thống đang có Position Bias.
 
 **Câu 2: Làm thế nào giảm verbosity bias bằng rubric design?**
 
-> *Câu trả lời:*
+> *Câu trả lời:* Đưa rõ quy tắc phạt vào Rubric: "Không cộng thêm điểm cho câu trả lời dài nếu chứa thông tin lan man/dư thừa. Ưu tiên sự ngắn gọn, đúng trọng tâm. Trừ điểm nếu dài dòng nhưng không cải thiện độ đầy đủ (Completeness)."
 
 **Câu 3: Tại sao cần calibrate LLM judge với human labels?**
 
-> *Câu trả lời:*
+> *Câu trả lời:* Vì LLM Judge có thể mắc các thiên vị (self-preference, leniency - quá dễ dãi, hoặc severity - quá khắt khe) hoặc không hiểu đúng domain context. Cần có một tập dữ liệu nhỏ do chuyên gia (human) chấm điểm để đối chiếu (tính correlation), từ đó tinh chỉnh rubric hoặc prompt của LLM Judge cho đến khi điểm số của LLM khớp với con người.
 
 ### Exercise 1.3 — Evaluation trong CI/CD
 
@@ -62,13 +65,16 @@ Ba bias thường gặp:
 
 | Metric | Threshold | Lý do |
 |---|---:|---|
-| Faithfulness | | |
-| Answer Relevance | | |
-| Completeness | | |
+| Faithfulness | 0.85 | Quan trọng nhất để tránh Hallucination (ảo giác). LLM không được phép bịa thông tin gây rủi ro pháp lý/nghiệp vụ. |
+| Answer Relevance | 0.80 | Đảm bảo trải nghiệm người dùng tốt, trả lời đúng trọng tâm câu hỏi. |
+| Completeness | 0.75 | Có thể châm chước mức độ chi tiết (để tránh câu trả lời quá dài), nhưng vẫn cần đủ ý chính. |
 
 **Câu 2: Khi nào dùng offline evaluation, online evaluation và human review?**
 
 > *Câu trả lời:*
+> - **Offline evaluation:** Dùng trong quá trình phát triển, testing, CI/CD pipeline trước khi release (mỗi khi sửa prompt, đổi model, đổi chunking). Test trên dataset cố định (Golden Dataset).
+> - **Online evaluation:** Dùng trên Production để monitor real-traffic. Đo lường user satisfaction (like/dislike), time saved, và chạy LLM-as-a-judge ngẫu nhiên để phát hiện data drift.
+> - **Human review:** Dùng khi khởi tạo Golden Dataset, khi calibrate LLM Judge, hoặc khi xử lý các cases high-stakes (rủi ro cao liên quan tới tuân thủ pháp luật, tài chính) mà LLM không đủ tin cậy.
 
 ---
 
