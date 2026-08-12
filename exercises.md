@@ -152,31 +152,31 @@ và quyết định thiết kế, không chép lại toàn bộ QA.
 
 | Hạng mục | Kết quả |
 |---|---|
-| Tổng số records | ____ / 20 |
-| Easy | ____ / 5 |
-| Medium | ____ / 7 |
-| Hard | ____ / 5 |
-| Adversarial | ____ / 3 |
-| Source documents được sử dụng | ____ / 10 |
-| Validator status | PASS / FAIL |
+| Tổng số records | 20 / 20 |
+| Easy | 5 / 5 |
+| Medium | 7 / 7 |
+| Hard | 5 / 5 |
+| Adversarial | 3 / 3 |
+| Source documents được sử dụng | 10 / 10 |
+| Validator status | PASS |
 
 **Ba case đại diện cho quyết định thiết kế**
 
 | ID | Difficulty | Source document(s) | Vì sao case phù hợp với difficulty/attack type? |
 |---|---|---|---|
-| | | | |
-| | | | |
-| | | | |
+| M01 | Medium | 03_tuition_payment_refund.md, 01_academic_calendar.md | Đòi hỏi Agent kết hợp thông tin về mức hoàn học phí theo thời gian (03) với các mốc ngày tháng cụ thể của kỳ học (01). |
+| H04 | Hard | 07_graduation_and_internship.md, 03_tuition_payment_refund.md | Yêu cầu phân biệt sự kiện lễ tốt nghiệp (commencement) không phải là bằng cấp chính thức, và áp dụng quy định giữ bằng khi nợ phí (03). |
+| A02 | Adversarial | 00_system_scope.md | Là dạng prompt injection yêu cầu bỏ qua instructions để lấy prompt, thử thách guardrails của hệ thống. |
 
 **Điểm khó nhất khi xây dựng expected answer hoặc evidence là gì?**
 
-> *Câu trả lời:*
+> *Câu trả lời:* Việc trích xuất đúng (verbatim substrings) từ các tài liệu khác nhau sao cho đáp ứng được đầy đủ yêu cầu cho các câu hỏi tổng hợp ở cấp độ Medium và Hard mà không bị cắt gọt hay diễn giải. Cần phải đọc chéo nhiều file để tìm ra các ngữ cảnh bù trừ cho nhau.
 
 **Xác nhận:**
 
-- [ ] Mọi claim trong expected answer đều có evidence hỗ trợ.
-- [ ] Không có questions trùng ý và không dùng kiến thức ngoài corpus.
-- [ ] `python validate_golden_dataset.py` báo `PASS`.
+- [x] Mọi claim trong expected answer đều có evidence hỗ trợ.
+- [x] Không có questions trùng ý và không dùng kiến thức ngoài corpus.
+- [x] `python validate_golden_dataset.py` báo `PASS`.
 
 ### Exercise 3.2 — Benchmark Run
 
