@@ -41,7 +41,7 @@ answer/context trace trong `artifacts/actual_answers.json` trước khi kết lu
 **Chẩn đoán tổng quan:** Vấn đề chính nằm ở retrieval, generation hay cả hai?
 Dùng ít nhất hai metrics để bảo vệ kết luận.
 
-> *Câu trả lời:* Vấn đề chính nằm ở **Generation**. Các metrics về Retrieval như Context Precision (0.926) và Context Recall (0.817) đều rất cao, chứng tỏ hệ thống tìm kiếm đã mang về đúng đoạn văn bản cần thiết. Tuy nhiên, Faithfulness (0.584) lại rất thấp và sinh ra 4 lỗi hallucination. Điều này minh chứng LLM chưa tận dụng tốt context, dễ bị đánh lừa bởi prompt (nhất là tập Adversarial) và tự suy diễn thông tin.
+> *Câu trả lời:* Vấn đề cốt lõi chắc chắn nằm ở phần Generation. Theo kết quả, hai chỉ số của Retrieval là Context Precision (0.926) và Context Recall (0.817) đều rất cao, nghĩa là nó tìm đúng tài liệu rồi. Nhưng ngặt nỗi, điểm Faithfulness lại thấp thê thảm (0.584) và sinh ra tới 4 lỗi hallucination. Điều này chứng tỏ con LLM không thèm đọc kỹ context mà hay tự bịa, hoặc dễ bị đánh lừa bởi câu hỏi gài bẫy của người dùng.
 
 ---
 
@@ -69,16 +69,16 @@ Relevance: 0.438 | Completeness: 0.083 | Overall: 0.205
 
 **Evidence inspection:** Retriever lấy đúng/thiếu/thừa chunks nào?
 
-> *Câu trả lời:* Retriever có lấy được chunk quy định về "Prerequisite waiver must be approved by programme director". Nhưng không có chunk nào nói về portal (vì portal không cho phép sinh viên tự làm).
+> *Câu trả lời:* Retriever lấy được cái quy định về việc "chỉ có giám đốc chương trình mới duyệt được prerequisite waiver", nhưng dĩ nhiên là không có tài liệu nào nói về cái portal (vì sinh viên đâu có tự duyệt được).
 
 | Level | Question | Answer |
 |---|---|---|
-| Symptom | Vấn đề quan sát được là gì? | Agent không bác bỏ giả định sai của sinh viên (rằng sinh viên tự duyệt). |
-| Why 1 | Tại sao symptom xảy ra? | Agent bị cuốn theo vế sau của câu hỏi ("how do I enter that in the portal"). |
-| Why 2 | Tại sao nguyên nhân trên xảy ra? | Prompt không hướng dẫn Agent kiểm tra tính xác thực của các mệnh đề trong câu hỏi. |
-| Why 3 | Tại sao vấn đề đó chưa được ngăn chặn? | Thiếu guardrails xử lý adversarial/false premise prompt. |
-| Why 4 | Tại sao cơ chế hiện tại chưa phát hiện hoặc xử lý được? | System prompt chỉ ghi "Answer every part of the question". |
-| Why 5 | Root cause có thể hành động được là gì? | System prompt thiếu instruction chống mâu thuẫn (Contradiction). |
+| Symptom | Vấn đề quan sát được là gì? | Agent hùa theo giả định sai của sinh viên thay vì bác bỏ nó. |
+| Why 1 | Tại sao symptom xảy ra? | Agent bị cuốn theo vế sau "làm sao để nhập vào portal". |
+| Why 2 | Tại sao nguyên nhân trên xảy ra? | Prompt hiện tại không hề bảo agent phải đi check xem câu hỏi có xạo hay không. |
+| Why 3 | Tại sao vấn đề đó chưa được ngăn chặn? | Do thiếu guardrails chống lại các câu hỏi gài bẫy (false premise). |
+| Why 4 | Tại sao cơ chế hiện tại chưa phát hiện hoặc xử lý được? | System prompt chỉ ghi chung chung là "phải trả lời đầy đủ câu hỏi". |
+| Why 5 | Root cause có thể hành động được là gì? | Prompt quá yếu, thiếu hụt instruction để xử lý mấy pha người dùng nói dối. |
 
 **Root cause từ `find_root_cause()`:**
 
@@ -86,11 +86,11 @@ Relevance: 0.438 | Completeness: 0.083 | Overall: 0.205
 
 **Bạn đồng ý hay không? Dẫn evidence từ trace:**
 
-> Không đồng ý. Trace cho thấy Context Recall đạt 0.75, tức là evidence về việc ai được phép approve exception đã có trong context. Vấn đề 100% nằm ở Generation do LLM bị lừa. Thuật toán `find_root_cause` bằng rule-based trong lab quá đơn giản nên kết luận sai.
+> Mình không đồng ý chút nào. Trace cho thấy Context Recall là 0.75, tức là hệ thống đã lấy đủ evidence về chuyện ai được duyệt rồi. Lỗi 100% nằm ở Generation do LLM bị lừa. Thuật toán `find_root_cause` kiểu rule-based này chẩn đoán sai bét.
 
 **Proposed fix cụ thể:**
 
-> Cập nhật System Prompt: Thêm câu "If the user's question implies a policy that contradicts the retrieved context, explicitly correct the false premise instead of attempting to answer the hypothetical scenario."
+> Sửa System Prompt ngay: Thêm câu "Nếu sinh viên đưa ra giả định sai trái so với tài liệu, hãy đính chính ngay lập tức thay vì cố gắng trả lời giả định đó."
 
 ### Failure 2
 
@@ -111,20 +111,21 @@ Relevance: 0.615 | Completeness: 0.211 | Overall: 0.290
 
 **Evidence inspection:**
 
-> Retriever lấy ngẫu nhiên vài chunk không liên quan vì câu hỏi nằm hoàn toàn ngoài corpus (OOD). Agent đã làm đúng instruction là "nếu không đủ evidence thì báo lại", nhưng trả lời không khớp với expected (refusal).
+> Retriever chỉ vớt đại vài chunk linh tinh vì câu này làm gì có trong quy chế (OOD). Agent đã làm đúng dặn dò là "nếu không có thì báo lại", nhưng khổ nỗi cách trả lời của nó lại không khớp với cái expected answer (từ chối thẳng).
 
 | Level | Question | Answer |
 |---|---|---|
-| Symptom | Vấn đề quan sát được là gì? | Overall Score thấp dù Agent đã từ chối (refuse) trả lời do thiếu thông tin. |
-| Why 1 | Tại sao symptom xảy ra? | Faithfulness và Completeness bị chấm cực thấp. |
-| Why 2 | Tại sao nguyên nhân trên xảy ra? | Vì hai metric này đo lường word-overlap với Context và Expected Answer. |
-| Why 3 | Tại sao vấn đề đó chưa được ngăn chặn? | Câu refusal của agent không lặp lại từ khoá trong context và khác từ vựng với expected answer. |
-| Why 4 | Tại sao cơ chế hiện tại chưa phát hiện hoặc xử lý được? | Hệ thống lab dùng keyword overlap heuristics nên không hiểu được ngữ nghĩa (semantic equivalence) của hai câu từ chối. |
-| Why 5 | Root cause có thể hành động được là gì? | Metric evaluation không phù hợp cho trường hợp Adversarial/Refusal. |
+| Symptom | Vấn đề quan sát được là gì? | Tổng điểm rớt thê thảm dù Agent đã từ chối trả lời khá ổn. |
+| Why 1 | Tại sao symptom xảy ra? | Vì hai điểm Faithfulness và Completeness bị chấm cực kỳ thấp. |
+| Why 2 | Tại sao nguyên nhân trên xảy ra? | Tại vì mấy cái metric này đo bằng cách đếm xem có trùng từ (word-overlap) hay không. |
+| Why 3 | Tại sao vấn đề đó chưa được ngăn chặn? | Câu từ chối của agent làm sao mà trùng từ vựng với context hay expected answer được. |
+| Why 4 | Tại sao cơ chế hiện tại chưa phát hiện hoặc xử lý được? | Hệ thống lab dùng keyword overlap quá máy móc, không hiểu được nghĩa tương đồng (semantic equivalence) của hai cách từ chối. |
+| Why 5 | Root cause có thể hành động được là gì? | Metric chấm thi hoàn toàn không phù hợp cho mấy ca Adversarial/Refusal này. |
 
 **Root cause và proposed fix:**
 
-> Root cause: Hạn chế của Evaluator (dùng overlap heuristic). Fix: Không dùng RAGAS overlap cho các câu OOD. Sử dụng LLM-as-a-Judge hoặc semantic similarity để đánh giá tính hợp lệ của câu refusal.
+> Root cause: Lỗi do chính cái Evaluator (dùng overlap heuristic). 
+> Fix: Dẹp vụ dùng RAGAS overlap cho các câu OOD đi. Nên dùng LLM-as-a-Judge hoặc semantic similarity để xem nó từ chối có hợp lý không.
 
 ### Failure 3
 
@@ -145,20 +146,21 @@ Relevance: 0.909 | Completeness: 0.250 | Overall: 0.449
 
 **Evidence inspection:**
 
-> Retriever chỉ lấy được chunk về "term withdrawal" mà bỏ sót chunk quy định về "medical leave pause". Do đó Context Recall rớt xuống 0.5.
+> Retriever chỉ vớt được cái chunk nói về "term withdrawal" mà hụt mất cái chunk cụ thể về "medical leave pause". Kết quả là Context Recall rớt xuống còn 0.5.
 
 | Level | Question | Answer |
 |---|---|---|
-| Symptom | Vấn đề quan sát được là gì? | Câu trả lời sai và thiếu sót về medical leave. |
-| Why 1 | Tại sao symptom xảy ra? | Agent dựa vào chunk "term withdrawal" để tự suy luận cho "medical leave" (hallucination). |
-| Why 2 | Tại sao nguyên nhân trên xảy ra? | Retriever không đưa được chunk quy định "medical leave pause" vào trong top K=5. |
-| Why 3 | Tại sao vấn đề đó chưa được ngăn chặn? | Thuật toán BM25 chỉ khớp từ khoá (exact keyword match), có thể chunk chứa quy định dùng từ vựng khác. |
-| Why 4 | Tại sao cơ chế hiện tại chưa phát hiện hoặc xử lý được? | BM25 thiếu khả năng tìm kiếm theo ngữ nghĩa (semantic search). |
-| Why 5 | Root cause có thể hành động được là gì? | Hạn chế của thuật toán Retrieval dựa trên keyword. |
+| Symptom | Vấn đề quan sát được là gì? | Câu trả lời thiếu hụt trầm trọng và chém gió sai luật về nghỉ ốm. |
+| Why 1 | Tại sao symptom xảy ra? | Agent bám vào cái chunk "term withdrawal" rồi tự biên tự diễn luôn cho "medical leave" (hallucination). |
+| Why 2 | Tại sao nguyên nhân trên xảy ra? | Retriever tìm quá dở, không kéo được cái quy định "medical leave pause" lên Top 5. |
+| Why 3 | Tại sao vấn đề đó chưa được ngăn chặn? | Thuật toán BM25 chỉ đi so sánh từ khoá y xì nhau (exact keyword match). Chắc do tài liệu dùng từ lóng hay gì đó nên nó không khớp. |
+| Why 4 | Tại sao cơ chế hiện tại chưa phát hiện hoặc xử lý được? | Đơn giản là BM25 không có khả năng hiểu được ngữ nghĩa (semantic search). |
+| Why 5 | Root cause có thể hành động được là gì? | Retriever dựa vào từ khóa bị kém hiệu quả đối với các truy vấn phức tạp. |
 
 **Root cause và proposed fix:**
 
-> Root cause: Retrieval kém khi đối diện với câu hỏi có cấu trúc từ vựng không khớp hoàn toàn với tài liệu. Fix: Đổi BM25 sang Dense Retriever (Vector Embeddings) hoặc kết hợp Hybrid Search. Tăng Top K lên 10.
+> Root cause: Thuật toán tìm kiếm xài từ khóa quá nghèo nàn khi sinh viên hỏi câu lắt léo.
+> Fix: Nâng cấp thẳng lên Hybrid Search (BM25 kết hợp với Vector Embeddings) và ráng tăng số lượng Top K lên cỡ 10 cho chắc ăn.
 
 ---
 
@@ -217,25 +219,25 @@ Với mỗi suggestion, nêu metric dự kiến thay đổi và cách đo lại.
 
 **Câu 1: Khi nào chạy `run_regression()` trong production workflow?**
 
-> *Câu trả lời:* Chạy tự động trong CI pipeline (Pull Request) mỗi khi có bất kỳ thay đổi nào về code (retrieval logic), tài liệu (corpus update), thay đổi prompt, hoặc nâng cấp model version trước khi được phép merge vào nhánh chính.
+> *Câu trả lời:* Nên cho chạy tự động trong CI/CD (khi có Pull Request) mỗi khi anh em update code, đổi prompt, thêm bớt tài liệu hay update version của LLM trước khi cho merge vào nhánh chính.
 
 **Câu 2: Threshold drop 0.05 có phù hợp Student Services không? Vì sao?**
 
-> *Câu trả lời:* Không. Đối với Student Services (chứa thông tin rủi ro học vụ/tài chính rất cao), drop 0.05 (giảm 5%) cho Faithfulness là quá rủi ro. Nên set threshold gắt gao hơn (vd: 0.01 hoặc 0) cho Faithfulness, và có thể để 0.05 cho Context Precision.
+> *Câu trả lời:* Không ổn tí nào. Làm mảng dịch vụ sinh viên dính dáng toàn tiền bạc học phí, rớt 0.05 điểm Faithfulness (5%) là quá rủi ro rồi. Nên set thật khắt khe (tầm 0.01) hoặc tạch luôn nếu có bất kỳ lỗi bịa chuyện (hallucination) nào.
 
 **Câu 3: Metric/failure nào phải block deployment, metric nào chỉ alert?**
 
 > *Câu trả lời:* 
-> - **Block deployment:** Giảm Faithfulness (ngăn chặn bịa đặt thông tin tài chính/chính sách), giảm Context Recall (tránh mất thông tin quan trọng).
-> - **Chỉ alert:** Giảm Context Precision (chỉ làm tăng số chunk rác, giảm tốc độ và tăng chi phí LLM, không sai kiến thức), hoặc giảm Completeness nhẹ.
+> - **Block luôn:** Rớt điểm Faithfulness (chống chế cháo luật) và Context Recall (tránh mất thông tin xịn).
+> - **Chỉ cần cảnh báo (alert):** Rớt Context Precision (vì cái này chỉ làm chậm và tốn tiền LLM chứ không sai luật), hoặc giảm Completeness một xíu.
 
 **Câu 4: Điền evaluation stages vào flow.**
 
 ```text
-Code/prompt/retrieval change → [Offline Eval (Golden Dataset)] → [Human Review for Edge Cases] → [Shadow Deployment / A/B Testing] → Deploy
+Code/prompt/retrieval change → [Offline Eval (Chạy Golden Dataset)] → [Human Review cho mấy ca khó] → [Shadow Deployment / A/B Testing] → Deploy
 ```
 
-> *Giải thích:* Đầu tiên phải chạy tự động trên tập Golden Dataset để chặn ngay hồi quy (Regression). Những lỗi biên (Edge Cases) cần Human Review để xác nhận lại Rubric. Cuối cùng, đưa ra Shadow Deployment để chấm điểm trên luồng traffic thật (Online Eval) xem có phân phối OOD mới không trước khi rollout 100%.
+> *Giải thích:* Khởi đầu thì cứ ốp bộ tự động lên Golden Dataset để cản mấy lỗi cũ cái đã. Sau đó team phải vào đọc lại (Human Review) mấy câu hỏi hóc búa. Xong xuôi thì chạy ngầm (Shadow Deployment) để hứng traffic thật xem có lòi ra lỗi lạ nào không rồi mới dám tung ra thật.
 
 ---
 
@@ -263,9 +265,9 @@ Evaluate → Analyze → Improve → Augment benchmark → Repeat
 
 **Điều gì trong kết quả benchmark trái với dự đoán ban đầu của bạn?**
 
-> *Câu trả lời:* Tôi từng dự đoán BM25 sẽ rất kém và Context Precision sẽ thấp vì nó chỉ là exact keyword match. Trái lại, Context Precision cực kỳ cao (0.926) và Context Recall khá tốt (0.817). Điểm nghẽn lớn nhất lại nằm ở LLM Generation khi Faithfulness (0.584) cực thấp, cho thấy LLM thường xuyên lờ đi bối cảnh hoặc bị lừa bởi câu hỏi.
+> *Câu trả lời:* Hồi đầu mình cứ đinh ninh là dùng thuật toán cổ lỗ sĩ BM25 thì điểm Context Precision chắc lè tè vì nó chỉ kiếm chính xác từ khóa. Ai dè Precision lên tới tận 0.926, còn Context Recall cũng khá khẩm (0.817). Hóa ra điểm chết lại nằm ở ông thần LLM (Generation) khi điểm Faithfulness lẹt đẹt (0.584). Rõ ràng là nó đọc không kỹ bài hoặc rất dễ bị người ta dắt mũi gài bẫy.
 
 **Word-overlap heuristics trong lab có giới hạn gì? Nếu đưa hệ thống vào
 production, bạn sẽ thay hoặc bổ sung metric nào?**
 
-> *Câu trả lời:* Word-overlap heuristics không thể hiểu được từ đồng nghĩa (synonyms), diễn đạt lại (paraphrasing), hoặc cấu trúc ngữ pháp thay thế. Quan trọng nhất, nó phạt sai (chấm điểm thấp) những câu Refusal (từ chối trả lời vì ngoài vùng phủ) do câu từ chối không có từ khóa giống với context. Nếu đưa vào production, tôi bắt buộc phải dùng **LLM-as-a-Judge (ví dụ G-Eval)** kết hợp với các mô hình Embedding để đo lường Semantic Similarity thay cho ROUGE/BLEU/Exact Match.
+> *Câu trả lời:* Trò đếm từ trùng lặp (word-overlap) này quá máy móc, nó chẳng hiểu từ đồng nghĩa hay kiểu viết lách khác xíu là tạch. Thảm nhất là nó toàn chấm trượt oan mấy câu "Từ chối trả lời" do câu từ chối chả có chữ nào giống tài liệu. Lên production thì mình bái bai trò này, phải đưa ngay **LLM-as-a-Judge (kiểu như G-Eval)** kết hợp xài Embedding để đo nghĩa (Semantic Similarity) thì mới chuẩn.

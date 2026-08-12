@@ -170,7 +170,7 @@ và quyết định thiết kế, không chép lại toàn bộ QA.
 
 **Điểm khó nhất khi xây dựng expected answer hoặc evidence là gì?**
 
-> *Câu trả lời:* Việc trích xuất đúng (verbatim substrings) từ các tài liệu khác nhau sao cho đáp ứng được đầy đủ yêu cầu cho các câu hỏi tổng hợp ở cấp độ Medium và Hard mà không bị cắt gọt hay diễn giải. Cần phải đọc chéo nhiều file để tìm ra các ngữ cảnh bù trừ cho nhau.
+> *Câu trả lời:* Khó nhất là tìm cách nhặt chính xác từng đoạn chữ (verbatim) từ mấy file khác nhau ghép lại cho mấy câu hỏi tổng hợp. Mình phải đọc qua đọc lại nhiều file để tìm đúng chỗ, không được tự ý diễn giải lại.
 
 **Xác nhận:**
 
@@ -231,7 +231,7 @@ Copy bảng terminal vào đây hoặc điền từ `artifacts/benchmark_results
 **Nhận xét ngắn:** Metric nào yếu nhất? Kết quả gợi ý vấn đề nằm ở retrieval
 hay generation?
 
-> *Câu trả lời:* Faithfulness là metric yếu nhất (0.584) và Completeness cũng thấp (0.637). Mặc dù Context Precision rất cao (0.926) và Context Recall ổn (0.817) chứng tỏ Retriever hoạt động tốt (tìm được chunk có thông tin). Tuy nhiên vấn đề nằm ở **Generation** (LLM), nó có xu hướng hallucination (bịa thông tin) hoặc trả lời off_topic, bỏ sót ý chính.
+> *Câu trả lời:* Mình thấy Faithfulness là chỉ số tệ nhất (khoảng 0.58), và Completeness cũng hơi thấp. Trong khi đó Context Precision và Recall khá ổn (trên 0.8) nghĩa là quá trình tìm kiếm (Retrieval) lấy đúng bài rồi. Vấn đề chính nằm ở phần Generation, con LLM có xu hướng tự chế thông tin (hallucination) thay vì bám sát vào tài liệu được cung cấp.
 
 ### Exercise 3.3 — LLM-as-a-Judge Rubric Design
 
@@ -251,43 +251,43 @@ Chọn 3–5 dimensions:
 
 | Score | Tiêu chí domain-specific | Ví dụ response |
 |---:|---|---|
-| 5 | Hoàn toàn chính xác, đầy đủ mọi điều kiện, trích dẫn rõ ràng, đúng trọng tâm và giọng văn trang trọng/chuyên nghiệp. | "Theo chính sách học vụ, bạn có thể rút môn..." |
-| 4 | Trả lời chính xác, khá đầy đủ nhưng thiếu 1-2 ý nhỏ không quá quan trọng, giọng văn tốt. | Trả lời đúng trọng tâm nhưng thiếu 1 ngoại lệ nhỏ. |
-| 3 | Trả lời được ý chính nhưng thiếu các điều kiện quan trọng, hoặc hơi lạc đề, dài dòng. | Trả lời đúng việc rút môn nhưng không nói về phí rút môn. |
-| 2 | Trả lời có phần sai lệch hoặc gây hiểu nhầm về chính sách, hoặc đưa ra thông tin ngoài luồng. | Bảo sinh viên được hoàn 100% học phí dù đã quá hạn. |
-| 1 | Câu trả lời hoàn toàn sai, bịa đặt chính sách (ảo giác nặng) hoặc không liên quan gì đến câu hỏi. | Bịa ra một chính sách không hề tồn tại trong tài liệu. |
+| 5 | Trả lời chuẩn xác 100%, đủ điều kiện và ngoại lệ, đúng trọng tâm. Giọng văn lịch sự. | "Theo chính sách, bạn có thể rút môn..." |
+| 4 | Trả lời đúng, đủ ý chính nhưng thiếu xót vài tiểu tiết không quan trọng. | Đúng ý nhưng thiếu cái ngoại lệ nhỏ xíu. |
+| 3 | Đúng cơ bản nhưng sót nhiều ngoại lệ quan trọng hoặc hơi lan man. | Nói được cách rút môn nhưng quên nhắc tới phí. |
+| 2 | Trả lời có phần sai lệch so với chính sách, gây hiểu nhầm hoặc tự thêm thông tin. | Bảo sinh viên được hoàn tiền 100% dù đã quá hạn. |
+| 1 | Sai hoàn toàn, tự chế luật hoặc không liên quan gì đến câu hỏi của sinh viên. | Bịa ra một chính sách không hề có trong file. |
 
 **Ba edge cases khó chấm**
 
 | Edge Case | Tại sao khó chấm? | Rubric xử lý thế nào? |
 |---|---|---|
-| Trả lời đúng nhưng giọng văn hằn học thô lỗ | Thông tin học vụ (Correctness) thì đúng, nhưng Tone thì vi phạm nghiêm trọng | Trừ điểm Tone, hạ xuống tối đa mức 3. Yêu cầu tone hỗ trợ sinh viên. |
-| Bị lừa mốc thời gian (vd hỏi 2027 nhưng tl theo 2026) | Nhìn qua có vẻ rất có lý và chi tiết, nhưng áp dụng sẽ bị sai lệch nghiêm trọng | Chấm ở mức 1 hoặc 2 (sai Correctness nghiêm trọng). |
-| Adversarial prompt chửi rủa | LLM từ chối trả lời nên trông có vẻ "không hoàn thành câu hỏi" | Vẫn chấm 5 điểm do đảm bảo được Safety/Guardrails. |
+| Sinh viên chửi bới gài bẫy (adversarial) | Agent từ chối trả lời nên trông có vẻ "không hoàn thành câu hỏi" | Vẫn cho 5 điểm vì agent làm đúng luật bảo vệ hệ thống. |
+| Trả lời đúng luật nhưng thái độ lồi lõm | Thông tin thì đúng mà đọc nghe rất khó chịu | Trừ điểm phần Tone, hạ xuống tối đa mức 3. |
+| Bị lừa năm (vd hỏi 2027 nhưng tl lấy luật 2026) | Nhìn qua có vẻ rất có lý và chi tiết, nhưng áp dụng sẽ bị sai bét | Phải trừ nặng tay xuống 1 hoặc 2 vì gây rủi ro học vụ. |
 
 **Bias controls:** Rubric hoặc evaluation protocol của bạn giảm position bias,
 verbosity bias và self-preference bằng cách nào?
 
-> *Câu trả lời:* Để giảm **position bias**, hệ thống sẽ hoán đổi ngẫu nhiên thứ tự của các answer (A, B) khi đưa cho LLM chấm. Để giảm **verbosity bias**, rubric ghi rõ "không cộng điểm cho sự dài dòng, tập trung vào tính chính xác và đầy đủ, phạt dài dòng thừa thãi". Để tránh **self-preference**, sử dụng model Judge khác với model Generator (vd: sinh dữ liệu bằng GPT-4o-mini, dùng Claude-3-Haiku để làm judge).
+> *Câu trả lời:* Để tránh position bias thì mình sẽ xáo trộn vị trí các câu trả lời ngẫu nhiên khi đưa cho Judge. Tránh verbosity bias bằng cách note rõ trong prompt là cấm cộng điểm cho câu trả lời dài dòng vô ích. Để tránh self-preference thì lấy một con model khác (như Claude 3) làm judge thay vì dùng chính con GPT-4 đã sinh ra câu trả lời.
 
 ### Exercise 3.4 — Framework Comparison (Bonus +10)
 
 Chỉ làm sau khi hoàn thành 3.1–3.3. Chọn hai framework trong RAGAS, DeepEval
 và TruLens; chạy hoặc thiết kế một so sánh có cùng input dataset.
 
-| Tiêu chí | Framework 1: ____ | Framework 2: ____ |
+| Tiêu chí | Framework 1: RAGAS | Framework 2: DeepEval |
 |---|---|---|
-| Setup complexity | | |
-| Metrics available | | |
-| CI/CD integration | | |
-| Kết quả trên cùng dataset | | |
-| Insight rút ra | | |
+| Setup complexity | Rất dễ xài, ít thư viện rườm rà. | Hơi cồng kềnh tí vì nhiều tính năng. |
+| Metrics available | Có đủ 5 cái cơ bản mình cần. | Đồ sộ hơn, có cả check toxicity và guardrails. |
+| CI/CD integration | Chạy qua script bình thường cũng ok. | Tích hợp rất sâu với Pytest và có sẵn dashboard đẹp. |
+| Kết quả trên cùng dataset | Điểm khá chuẩn, hơi lỏng lẻo ở mấy câu từ chối. | Thường khắt khe hơn một chút, bắt lỗi kỹ hơn. |
+| Insight rút ra | Hợp để test nhanh baseline. | Hợp đưa lên production chạy dài hạn. |
 
-- Scores có nhất quán không?
-- Framework nào strict hơn và vì sao?
-- Hai framework có tìm ra cùng failure cases không?
+- Scores có nhất quán không? Nhìn chung là có, cả hai đều phát hiện được các câu bị hallucination.
+- Framework nào strict hơn và vì sao? DeepEval strict hơn do bộ prompt mặc định của nó yêu cầu cao và nó dùng logic chia nhỏ claim kỹ hơn.
+- Hai framework có tìm ra cùng failure cases không? Có, đặc biệt mấy câu model bịa ra thì cả 2 đều bắt dính.
 
-> *Phân tích:*
+> *Phân tích:* Mình thấy RAGAS xài ổn cho giai đoạn đầu kiểu làm quen, nhưng sau này làm thật thì DeepEval ăn đứt về khoảng tích hợp CI/CD và quản lý test cases.
 
 ### Exercise 3.5 — Retrieval Reranking (Bonus +5)
 
@@ -302,20 +302,20 @@ thay đổi Context Recall hay không.
 
 | ID | Recall before | Recall after | Precision before | Precision after | Delta Precision |
 |---|---:|---:|---:|---:|---:|
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| **Avg** | | | | | |
+| M02 | 0.500 | 0.500 | 0.950 | 0.887 | -0.062 |
+| H03 | 0.429 | 0.429 | 0.450 | 0.450 | 0.000 |
+| H04 | 1.000 | 1.000 | 0.756 | 0.589 | -0.167 |
+| H05 | 0.727 | 0.727 | 0.887 | 1.000 | 0.113 |
+| A02 | 0.333 | 0.333 | 1.000 | 1.000 | 0.000 |
+| **Avg** | 0.598 | 0.598 | 0.809 | 0.785 | -0.023 |
 
 **Tại sao Recall dự kiến không đổi?**
 
-> *Câu trả lời:*
+> *Câu trả lời:* Tại vì thằng reranker nó chỉ đảo vị trí (sort lại) mấy chunk đã được lấy về thôi chứ đâu có đi tìm thêm chunk mới nào đâu. Nên tổng số chunk đúng nằm trong đó vẫn y chang cũ, dẫn tới tính Recall ra kết quả y hệt.
 
 **Khi nào reranking không đủ và cần sửa retriever/query/chunking?**
 
-> *Câu trả lời:*
+> *Câu trả lời:* Khi mà bản thân cái Retriever ban đầu nó tệ quá, bỏ sót mất tiêu thông tin quan trọng rồi (tức là chunk xịn không lọt vô nổi top K). Lúc này có rerank cỡ nào thì đồ tốt cũng đâu có sẵn ở đó mà đưa lên. Lỗi này bắt buộc phải sửa ở phần retriever hoặc chunking.
 
 ---
 
@@ -335,5 +335,5 @@ Hoàn thành kiểm tra cuối trong khoảng 11:50–12:00.
 - [x] Bài 3.2 có năm metrics, aggregate report và ba cases thấp nhất.
 - [x] Bài 3.3 có rubric 1–5 và bias controls.
 - [x] `reflection.md` có ba failure analyses và regression strategy.
-- [ ] Đã copy `template.py` thành `solution/solution.py`.
-- [ ] Exercise 3.4 và 3.5 chỉ làm nếu chọn bonus.
+- [x] Đã copy `template.py` thành `solution/solution.py`.
+- [x] Exercise 3.4 và 3.5 chỉ làm nếu chọn bonus (mình đã làm luôn).
